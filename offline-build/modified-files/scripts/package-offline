@@ -1,0 +1,32 @@
+#!/bin/bash
+# 离线版 package 脚本
+set -ex
+
+source $(dirname $0)/version
+source $(dirname $0)/export-config
+source $(dirname $0)/package-env
+
+cd $(dirname $0)/..
+
+ARCH=${ARCH:-"amd64"}
+TAG=${TAG:-"v2.10.3"}
+REPO=${REPO:-"rancher"}
+
+echo "Building Rancher ${TAG} for ${ARCH}..."
+
+# 编译 server 和 agent
+./scripts/build-server-offline
+./scripts/build-agent
+
+# 构建 Docker 镜像（使用离线版 Dockerfile）
+cd package
+docker build \
+    --build-arg VERSION=${TAG} \
+    --build-arg ARCH=${ARCH} \
+    --build-arg IMAGE_REPO=${REPO} \
+    -f Dockerfile.offline \
+    -t ${REPO}/rancher:${TAG} .
+
+cd ..
+
+echo "Build complete!"

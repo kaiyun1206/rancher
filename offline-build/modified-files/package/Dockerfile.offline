@@ -1,0 +1,68 @@
+# 离线版 Dockerfile - 使用本地资源
+# 注意: 此文件需要在构建前替换原始的 package/Dockerfile
+
+FROM registry.suse.com/bci/bci-base:15.6
+
+ARG ARCH=amd64
+ENV ARCH=${ARCH}
+
+# 安装基础依赖
+RUN zypper -n install \
+    git-core \
+    curl \
+    wget \
+    tar \
+    gzip \
+    unzip \
+    sed \
+    gawk \
+    jq \
+    iptables \
+    ca-certificates \
+    && zypper clean -a
+
+# 从本地复制二进制文件（而不是从网络下载）
+COPY resources/binaries/${ARCH}/rancher-machine.tar.gz /tmp/
+RUN tar xvzf /tmp/rancher-machine.tar.gz -C /usr/bin && \
+    rm /tmp/rancher-machine.tar.gz
+
+COPY resources/binaries/${ARCH}/tini /usr/bin/tini
+RUN chmod +x /usr/bin/tini
+
+COPY resources/binaries/${ARCH}/helm-v3.tar.gz /tmp/
+RUN tar xvzf /tmp/helm-v3.tar.gz --strip-components=1 -C /usr/bin && \
+    rm /tmp/helm-v3.tar.gz
+
+COPY resources/binaries/${ARCH}/etcd.tar.gz /tmp/
+RUN tar xvzf /tmp/etcd.tar.gz --strip-components=1 -C /usr/bin && \
+    rm /tmp/etcd.tar.gz
+
+COPY resources/binaries/${ARCH}/kustomize.tar.gz /tmp/
+RUN tar xvzf /tmp/kustomize.tar.gz -C /usr/bin && \
+    rm /tmp/kustomize.tar.gz
+
+# 复制 Charts 仓库
+COPY resources/charts/system-charts /var/lib/rancher-data/local-catalogs/system-library
+COPY resources/charts/charts /var/lib/rancher-data/local-catalogs/v2/rancher-charts/latest
+COPY resources/charts/partner-charts /var/lib/rancher-data/local-catalogs/v2/rancher-partner-charts/latest
+COPY resources/charts/rke2-charts /var/lib/rancher-data/local-catalogs/v2/rancher-rke2-charts/latest
+
+# 复制 UI 资源
+COPY resources/ui-assets/ui-*.tar.gz /usr/share/rancher/ui/
+COPY resources/ui-assets/dashboard-*.tar.gz /usr/share/rancher/ui-dashboard/
+COPY resources/ui-assets/api-ui-*.tar.gz /usr/share/rancher/ui-api/
+
+# 复制 Agent 文件
+COPY resources/agent-files/system-agent/* /usr/share/rancher/agent-files/system-agent/
+COPY resources/agent-files/wins/* /usr/share/rancher/agent-files/wins/
+
+# 复制 KDM 数据
+COPY resources/kdm/data.json /var/lib/rancher-data/kdm/data.json
+
+# ... 其余部分保持与原始 Dockerfile 相同 ...
+# 注意: 实际使用时需要基于原始 Dockerfile 进行修改
+
+VOLUME /var/lib/rancher
+WORKDIR /usr/share/rancher
+
+ENTRYPOINT ["entrypoint.sh"]

@@ -37,3 +37,9 @@ kontainer-engine
 k3s-images.txt
 k3s-airgap-images.tar
 data.json
+
+# Large Docker images - transfer via DVD/external media
+offline-build/resources/docker-images/*.tar
+
+# Large Windows binaries - can be downloaded separately if needed
+offline-build/resources/agent-files/wins/wins.exe
